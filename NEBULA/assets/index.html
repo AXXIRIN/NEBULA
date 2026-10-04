@@ -1,0 +1,147 @@
+<!DOCTYPE html><html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>NEBULA</title>
+<style>
+:root{--bg:#0a0a1a;--p:#13132b;--l:#26264d;--c:#5ef2ff;--v:#b388ff;--k:#ff6ec7;--t:#d8d8f0;--d:#7a7aa8}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html,body{height:100%;background:var(--bg);color:var(--t);font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;overflow:hidden}
+body{display:flex;flex-direction:column;padding:8px 10px}
+button,input,textarea{font:inherit;color:inherit;background:var(--p);border:1px solid var(--l);border-radius:6px;padding:6px 8px;outline:0}
+button{color:var(--c)}button:active{background:var(--l)}
+input:focus,textarea:focus{border-color:var(--v)}
+#boot{position:fixed;inset:0;background:var(--bg);z-index:9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;transition:opacity .5s}
+#bart{font-weight:800;font-size:clamp(10px,3.8vw,17px);line-height:1.1;white-space:pre;color:var(--v)}
+#bbar,#bst{color:var(--d);font-size:11px;white-space:pre}
+.h{opacity:0}.h.on{opacity:1}
+#ps{color:var(--d);min-height:1.5em}
+#art{font-weight:900;font-size:clamp(14px,5.6vw,26px);line-height:1.05;white-space:pre;min-height:2.2em;background:linear-gradient(90deg,var(--c),var(--v),var(--k));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.mq{overflow:hidden;white-space:nowrap;color:var(--k);border-block:1px solid var(--l);margin:6px 0;padding:2px 0}
+.mq span{display:inline-block;padding-left:100%;animation:mq 9s linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+#menu{display:flex;gap:6px;margin-bottom:8px}
+#menu button{flex:1;min-height:32px;white-space:nowrap}
+#menu button.on{border-color:var(--c);background:var(--l)}
+.view{display:none;flex:1;min-height:0;flex-direction:column;gap:6px}.view.on{display:flex}
+.row{display:flex;gap:6px}.row>input{flex:1;min-width:0}.col{display:flex;flex-direction:column;gap:6px}
+#nlist,#chat,#tout{flex:1;min-height:0;overflow:auto}
+.note{padding:6px 8px;margin-bottom:5px;background:var(--p);border-left:2px solid var(--v);border-radius:0 6px 6px 0}
+.note small{display:block;color:var(--d);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#nb{flex:1;resize:none}
+#tout{white-space:pre-wrap;word-break:break-all;color:#b8f5c0}
+.pr{display:flex;align-items:center;gap:6px;color:var(--c);white-space:nowrap}
+.pr input{flex:1;min-width:0;border:0;background:none;padding:4px 0}
+.m{padding:6px 8px;margin-bottom:6px;border-radius:8px;white-space:pre-wrap;word-break:break-word;max-width:92%}
+.you{background:var(--l);margin-left:auto}.ai{background:var(--p);border:1px solid var(--l)}
+</style></head><body>
+<div id="boot"><pre id="bart"></pre><div id="bbar"></div><div id="bst"></div></div>
+<div id="ps" class="h"></div>
+<pre id="art" class="h"></pre>
+<div id="mq" class="mq h"><span>by @AXXIRIN in GitHub &nbsp;•&nbsp; by @AXXIRIN in GitHub &nbsp;•&nbsp; by @AXXIRIN in GitHub</span></div>
+<div id="menu"><button></button><button></button><button></button></div>
+
+<section class="view" id="v0">
+  <div id="nlist"></div>
+  <button id="nn">+ catatan baru</button>
+  <input id="nt" placeholder="judul" hidden>
+  <textarea id="nb" placeholder="tulis catatan..." hidden></textarea>
+  <div class="row" id="nrow" hidden><button id="ns">simpan</button><button id="nd">hapus</button><button id="nx">kembali</button></div>
+</section>
+
+<section class="view" id="v1">
+  <pre id="tout"></pre>
+  <div class="pr"><span id="tps">~ $</span><input id="tin" autocapitalize="off" autocomplete="off" spellcheck="false" enterkeyhint="send"></div>
+</section>
+
+<section class="view" id="v2">
+  <div id="chat"></div>
+  <div id="cfg" class="col" hidden>
+    <input id="cu" placeholder="endpoint API"><input id="ck" type="password" placeholder="API key"><input id="cm" placeholder="model"><button id="cs">simpan</button>
+  </div>
+  <div class="row"><input id="ain" placeholder="tanya NEBULA AI..." enterkeyhint="send"><button id="asend">kirim</button><button id="acfg">⚙</button></div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s),sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const A=window.Android||{loadNotes:()=>localStorage.notes||'[]',saveNotes:s=>localStorage.notes=s,
+  exec:(c,i)=>setTimeout(()=>onExec(i,'(terminal hanya aktif di APK)\n','~'),50)};
+const T=["█▄ █ █▀▀ █▄▄ █ █ █   ▄▀█","█ ▀█ ██▄ █▄█ ▀▄▀ █▄▄ █▀█"];
+
+/* ---------- tabs ---------- */
+const B=document.querySelectorAll('#menu button');
+function go(n){document.querySelectorAll('.view').forEach((v,i)=>v.classList.toggle('on',i==n));B.forEach((b,i)=>b.classList.toggle('on',i==n))}
+B.forEach((b,i)=>b.onclick=()=>go(i));
+
+/* ---------- note ---------- */
+let notes=[],cur=null,tm;
+try{notes=JSON.parse(A.loadNotes())}catch(e){}
+const save=()=>A.saveNotes(JSON.stringify(notes));
+function list(){nlist.innerHTML='';
+  notes.slice().sort((a,b)=>b.u-a.u).forEach(n=>{const d=document.createElement('div');d.className='note';
+    d.innerHTML='<b></b><small></small>';d.firstChild.textContent=n.t||'(tanpa judul)';
+    d.lastChild.textContent=new Date(n.u).toLocaleString()+' · '+n.b.replace(/\s+/g,' ').slice(0,40);
+    d.onclick=()=>edit(n);nlist.append(d)});
+  if(!notes.length)nlist.textContent='// belum ada catatan'}
+function ed(on){nlist.hidden=nn.hidden=on;nt.hidden=nb.hidden=nrow.hidden=!on}
+function edit(n){cur=n;nt.value=n.t;nb.value=n.b;ed(true)}
+function commit(){if(!cur)return;cur.t=nt.value;cur.b=nb.value;cur.u=Date.now();
+  if(!notes.includes(cur)){if(!cur.t&&!cur.b)return;notes.push(cur)}save()}
+function back(){commit();cur=null;ed(false);list()}
+nn.onclick=()=>edit({t:'',b:'',u:Date.now()});
+nt.oninput=nb.oninput=()=>{clearTimeout(tm);tm=setTimeout(commit,400)};
+ns.onclick=()=>{commit();ns.textContent='tersimpan ✓';setTimeout(()=>ns.textContent='simpan',900)};
+nd.onclick=()=>{notes=notes.filter(n=>n!==cur);save();cur=null;ed(false);list()};
+nx.onclick=back;list();
+
+/* ---------- terminal ---------- */
+const log=s=>{tout.textContent+=s+'\n';tout.scrollTop=1e9};
+tout.textContent='NEBULA terminal · ketik "help"\n';
+function run(c){log(tps.textContent+' '+c);c=c.trim();if(!c)return;
+  if(c=='clear'){tout.textContent='';return}
+  if(c=='help'){log('shell sh milik app NEBULA (sandbox).\ncontoh: ls, pwd, cd, cat, echo, clear');return}
+  A.exec(c,1)}
+window.onExec=(i,o,d)=>{if(o.trim())log(o.replace(/\n$/,''));tps.textContent=(d.split('/').pop()||'/')+' $'};
+tin.onkeydown=e=>{if(e.key=='Enter'||e.keyCode==13){const c=tin.value;tin.value='';run(c)}};
+
+/* ---------- AI clone ---------- */
+const C=Object.assign({url:'https://api.openai.com/v1/chat/completions',key:'',model:'gpt-4o-mini'},JSON.parse(localStorage.ai||'{}'));
+cu.value=C.url;ck.value=C.key;cm.value=C.model;
+acfg.onclick=()=>cfg.hidden=!cfg.hidden;
+cs.onclick=()=>{C.url=cu.value.trim();C.key=ck.value.trim();C.model=cm.value.trim();localStorage.ai=JSON.stringify(C);cfg.hidden=true};
+const msgs=[{role:'system',content:'Kamu NEBULA AI. Jawab ringkas dan jelas.'}];
+function bub(c,t){const d=document.createElement('div');d.className='m '+c;d.textContent=t;chat.append(d);chat.scrollTop=1e9;return d}
+async function ask(){const q=ain.value.trim();if(!q)return;
+  if(!C.key){bub('ai','Isi API key dulu lewat ⚙.');return}
+  ain.value='';bub('you',q);msgs.push({role:'user',content:q});const b=bub('ai','…');
+  try{const r=await fetch(C.url,{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+C.key},
+      body:JSON.stringify({model:C.model,messages:msgs})});
+    const j=await r.json(),a=(j.choices&&j.choices[0].message.content)||JSON.stringify(j);
+    b.textContent=a;msgs.push({role:'assistant',content:a})}
+  catch(e){b.textContent='error: '+e.message}}
+asend.onclick=ask;ain.onkeydown=e=>{if(e.key=='Enter'||e.keyCode==13)ask()};
+bub('ai','NEBULA AI siap. Atur endpoint, key, dan model lewat ⚙.');
+
+/* ---------- boot (±5 detik) ---------- */
+const G="█▓▒░▄▀▌▐#@%&$<>/{}[]01=+*",R=7,W=26,rg=()=>G[Math.random()*G.length|0];
+const MSG=["scan   : glyph table rusak","repair : menyambung fragmen","patch  : rebuild NEBULA","verify : checksum ok","ready"];
+const cells=[];
+for(let r=0;r<R;r++)for(let c=0;c<W;c++){const tr=r-2,tc=c-1,ch=tr>=0&&tr<2&&tc>=0&&tc<24?T[tr][tc]:' ';
+  cells.push({ch,at:ch==' '?600+Math.random()*3400:1000+Math.random()*3200})}
+const t0=performance.now();
+(function f(){const t=performance.now()-t0,p=Math.min(t/5e3,1);let s='';
+  cells.forEach((k,i)=>{if(i&&i%W==0)s+='\n';
+    s+=t<k.at?(k.ch==' '&&Math.random()<.4?' ':rg()):(t<k.at+350&&Math.random()<.2?rg():k.ch)});
+  bart.textContent=s;bbar.textContent='['+'█'.repeat(p*20|0).padEnd(20,'░')+'] '+(p*100|0)+'%';
+  bst.textContent=MSG[Math.min(p*MSG.length|0,4)];
+  p<1?setTimeout(f,70):done()})();
+
+async function type(el,s,sp){el.textContent='';for(const c of s){el.textContent+=c;await sleep(sp)}}
+async function done(){boot.style.opacity=0;setTimeout(()=>boot.remove(),500);await sleep(300);
+  ps.classList.add('on');await type(ps,'nebula@float:~$ ./start --ui',16);
+  art.classList.add('on');art.textContent='';
+  for(const l of T){for(const c of l){art.textContent+=c;await sleep(7)}art.textContent+='\n'}
+  mq.classList.add('on');await sleep(250);
+  const L=['1 note','2 terminal','3 ai-clone'];
+  for(let i=0;i<3;i++)await type(B[i],L[i],30);
+  go(0)}
+</script></body></html>
